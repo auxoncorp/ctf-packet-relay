@@ -3,6 +3,7 @@
 use ctf_packet_relay::packet_publisher::{run_packet_publisher, PacketPublisherConfig};
 use ctf_packet_relay::packet_subscriber::{run_packet_subscriber, PacketSubscriberConfig};
 use ctf_packet_relay::serial::DeviceOpts;
+use ctf_packet_relay::DeviceOrSocket;
 use std::{collections::BTreeSet, fs, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 use structopt::{clap, StructOpt};
 use thiserror::Error;
@@ -11,7 +12,7 @@ use tracing::{debug, error};
 
 /// CTF packet relay
 ///
-/// Relays CTF packets from a serial device to one or more LTTng relayd sessions
+/// Relays CTF packets from a serial device or socket to one or more LTTng relayd sessions
 #[derive(Debug, StructOpt)]
 #[structopt(name = "ctf-packet-relay", verbatim_doc_comment)]
 #[structopt(help_message = "Prints help information. Use --help for more details.")]
@@ -54,9 +55,13 @@ struct Opts {
     #[structopt(name = "metadata-file")]
     metadata: PathBuf,
 
-    /// Serial device path
-    #[structopt(name = "device")]
-    device: String,
+    /// Source serial device or socket URL
+    ///
+    /// Examples:
+    /// - file:/dev/ttyUSB0
+    /// - udp://localhost:456
+    #[structopt(name = "device-or-socket", verbatim_doc_comment)]
+    source_url: DeviceOrSocket,
 }
 
 #[derive(Debug, Error)]
@@ -169,7 +174,7 @@ async fn do_main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut pkt_pub_join_handle = tokio::spawn(async move {
         run_packet_publisher(
-            opts.device.clone(),
+            opts.source_url.clone(),
             opts.device_opts.clone(),
             opts.metadata.clone(),
             pkt_pub_cfgs,
