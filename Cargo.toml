@@ -31,3 +31,13 @@ url = "2.2"
 socket2 = "0.4"
 structopt = { version = "0.3", features = ["color"] }
 ctrlc = { version = "3.2", features=["termination"] }
+
+[profile.release]
+strip="debuginfo"
+
+[package.metadata.deb]
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/ctf-packet-relay", "usr/bin/", "755"],
+]
