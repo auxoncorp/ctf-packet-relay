@@ -1,5 +1,6 @@
 #![deny(warnings, clippy::all)]
 
+use chrono::{DateTime, Utc};
 use ctf_packet_relay::packet_publisher::{run_packet_publisher, PacketPublisherConfig};
 use ctf_packet_relay::packet_subscriber::{run_packet_subscriber, PacketSubscriberConfig};
 use ctf_packet_relay::serial::DeviceOpts;
@@ -40,7 +41,10 @@ struct Opts {
 
     /// Map stream IDs to a specific LTTng relayd session name and pathname.
     ///
-    /// Can be supplied multiple times.
+    /// This option can be supplied multiple times.
+    ///
+    /// The pathname portion may also use the keyword $DATETIME as part of its
+    /// value, which expands to UTC datetime in the format of YYYYmmdd-HHMMSS.
     ///
     /// Format:
     ///   <session-name>:<pathname>:<comma-separated-stream-ids>
@@ -48,6 +52,7 @@ struct Opts {
     /// Example:
     ///   --stream-mapping my-stream-a:trace-a:0,1
     ///   --stream-mapping my-stream-b:trace-b:2,5
+    ///   --stream-mapping session-foo:session-$DATETIME:42
     #[structopt(name = "stream-mapping", short = "s", long, verbatim_doc_comment)]
     stream_mappings: Vec<StreamMapping>,
 
@@ -125,7 +130,7 @@ async fn do_main() -> Result<(), Box<dyn std::error::Error>> {
         vec![StreamMapping::default()]
     };
 
-    // Check that their are no overlapping stream IDs among the stream mappings, must be exclusive
+    // Check that there are no overlapping stream IDs among the stream mappings, must be exclusive
     // Same for duplicate session names
     let mut all_stream_ids = BTreeSet::new();
     let mut all_session_names = BTreeSet::new();
@@ -265,7 +270,7 @@ pub struct DuplicateStreamIdMappingError(String, u64);
 #[error("The session name '{0}' can only be used in a single stream mapping")]
 pub struct DuplicateSessionNameMappingError(String);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct StreamMapping {
     /// Defaults to 'session'
     pub session_name: String,
@@ -295,19 +300,53 @@ impl FromStr for StreamMapping {
         if parts.len() != 3 {
             return Err(err_msg.to_string());
         }
-        let session_name = parts[0];
-        let pathname = parts[1];
+        let session_name = parts[0].to_string();
+        let pathname_str = parts[1];
         let ids = parts[2];
 
+        let pathname = if pathname_str.contains("$DATETIME") {
+            let now: DateTime<Utc> = Utc::now();
+            let datetime = now.format("%Y%m%d-%H%M%S").to_string();
+            pathname_str.replace("$DATETIME", &datetime)
+        } else {
+            pathname_str.to_string()
+        };
+
         Ok(Self {
-            session_name: session_name.to_string(),
-            pathname: pathname.to_string(),
+            session_name,
+            pathname,
             stream_ids: ids
                 .split(',')
                 .filter(|s| !s.is_empty())
-                .map(|s| s.parse::<u64>())
+                .map(|s| s.trim().parse::<u64>())
                 .collect::<Result<BTreeSet<u64>, _>>()
                 .map_err(|_| err_msg.to_string())?,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    #[test]
+    fn stream_mappings() {
+        assert_eq!(
+            StreamMapping::from_str("my-stream-a:trace-a:0,1,22,44").unwrap(),
+            StreamMapping {
+                session_name: "my-stream-a".to_owned(),
+                pathname: "trace-a".to_owned(),
+                stream_ids: vec![0, 1, 22, 44].into_iter().collect(),
+            }
+        );
+
+        let sm = StreamMapping::from_str("system-session:system=$DATETIME:1, 2, 4").unwrap();
+        assert_eq!(sm.session_name, "system-session".to_owned());
+        assert_eq!(sm.stream_ids, vec![1, 2, 4].into_iter().collect());
+        let parts: Vec<&str> = sm.pathname.split('=').collect();
+        assert_eq!(parts.len(), 2);
+        assert_eq!(parts[0], "system");
+        assert!(Utc.datetime_from_str(parts[1], "%Y%m%d-%H%M%S").is_ok());
     }
 }

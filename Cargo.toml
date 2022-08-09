@@ -1,6 +1,6 @@
 [package]
 name = "ctf-packet-relay"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Jon Lamb <jon@auxon.io>"]
 description = "Relays CTF packets from a serial device or socket to one or more LTTng relayd sessions"
@@ -30,6 +30,7 @@ hostname = "0.3"
 derive_more = "0.99"
 url = "2.2"
 socket2 = "0.4"
+chrono = "0.4"
 structopt = { version = "0.3", features = ["color"] }
 ctrlc = { version = "3.2", features=["termination"] }
 

@@ -2,5 +2,6 @@
 ignore = [
     # serialport needs its nix dependency updated
     # see https://gitlab.com/susurrus/serialport-rs/-/merge_requests/113
-    'RUSTSEC-2021-0119'
+    'RUSTSEC-2021-0119',
+    "RUSTSEC-2020-0071"
 ]
