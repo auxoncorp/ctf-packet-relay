@@ -43,8 +43,10 @@ struct Opts {
     ///
     /// This option can be supplied multiple times.
     ///
-    /// The pathname portion may also use the keyword $DATETIME as part of its
+    /// The pathname portion can use the keyword $DATETIME as part of its
     /// value, which expands to UTC datetime in the format of YYYYmmdd-HHMMSS.
+    ///
+    /// The comma-separated-stream-ids can be set to ANY to match any stream ID.
     ///
     /// Format:
     ///   <session-name>:<pathname>:<comma-separated-stream-ids>
@@ -315,12 +317,15 @@ impl FromStr for StreamMapping {
         Ok(Self {
             session_name,
             pathname,
-            stream_ids: ids
-                .split(',')
-                .filter(|s| !s.is_empty())
-                .map(|s| s.trim().parse::<u64>())
-                .collect::<Result<BTreeSet<u64>, _>>()
-                .map_err(|_| err_msg.to_string())?,
+            stream_ids: if ids == "ANY" {
+                Default::default()
+            } else {
+                ids.split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.trim().parse::<u64>())
+                    .collect::<Result<BTreeSet<u64>, _>>()
+                    .map_err(|_| err_msg.to_string())?
+            },
         })
     }
 }
@@ -338,6 +343,15 @@ mod tests {
                 session_name: "my-stream-a".to_owned(),
                 pathname: "trace-a".to_owned(),
                 stream_ids: vec![0, 1, 22, 44].into_iter().collect(),
+            }
+        );
+
+        assert_eq!(
+            StreamMapping::from_str("my-stream-a:trace-a:ANY").unwrap(),
+            StreamMapping {
+                session_name: "my-stream-a".to_owned(),
+                pathname: "trace-a".to_owned(),
+                stream_ids: Default::default(),
             }
         );
 
