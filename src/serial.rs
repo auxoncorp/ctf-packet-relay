@@ -39,7 +39,7 @@ pub fn open(device: &str, opts: &DeviceOpts) -> Result<SerialStream, Error> {
     Ok(port)
 }
 
-#[derive(Debug, Clone, PartialEq, StructOpt)]
+#[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 #[structopt(setting = clap::AppSettings::ColoredHelp)]
 pub struct DeviceOpts {
     /// Serial device baud rate
@@ -75,7 +75,7 @@ impl Default for DeviceOpts {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, From, Into)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, From, Into)]
 pub struct DataBits(pub tokio_serial::DataBits);
 
 impl FromStr for DataBits {
@@ -92,7 +92,7 @@ impl FromStr for DataBits {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, From, Into)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, From, Into)]
 pub struct FlowControl(pub tokio_serial::FlowControl);
 
 impl FromStr for FlowControl {
@@ -108,7 +108,7 @@ impl FromStr for FlowControl {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, From, Into)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, From, Into)]
 pub struct Parity(pub tokio_serial::Parity);
 
 impl FromStr for Parity {
@@ -124,7 +124,7 @@ impl FromStr for Parity {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, From, Into)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, From, Into)]
 pub struct StopBits(pub tokio_serial::StopBits);
 
 impl FromStr for StopBits {
