@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.ref }}
           path: src/github.com/auxon/ctf-packet-relay
@@ -36,10 +36,13 @@ jobs:
         working-directory: src/github.com/auxon/ctf-packet-relay
 
   package:
-    name: Build Release Package
+    name: Package
     timeout-minutes: 60
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-${{ matrix.ubuntu_version }}
     needs: [check]
+    strategy:
+      matrix:
+        ubuntu_version: [20.04, 22.04]
     steps:
       - name: Print version
         run: |
@@ -57,7 +60,7 @@ jobs:
           sudo apt-get install -y flex bison m4 gettext autotools-dev build-essential libglib2.0-dev
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -85,7 +88,7 @@ jobs:
 
       - name: Build deb package
         run: |
-          cargo deb --deb-version ${{ env.RELEASE_VERSION }} --no-build --no-strip
+          cargo deb --deb-version ${{ env.RELEASE_VERSION }}+${{ matrix.ubuntu_version }} --no-build --no-strip
 
       - name: Create github release
         id: create_release
@@ -98,4 +101,4 @@ jobs:
           name: Release ${{ env.RELEASE_VERSION }}
           files: |
             target/release/ctf-packet-relay
-            target/debian/ctf-packet-relay_${{env.RELEASE_VERSION}}_amd64.deb
+            target/debian/ctf-packet-relay_${{env.RELEASE_VERSION}}+${{matrix.ubuntu_version}}_amd64.deb
