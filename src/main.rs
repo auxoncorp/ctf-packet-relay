@@ -49,7 +49,7 @@ struct Opts {
     /// The comma-separated-stream-ids can be set to ANY to match any stream ID.
     ///
     /// Format:
-    ///   <session-name>:<pathname>:<comma-separated-stream-ids>
+    ///   `<session-name>:<pathname>:<comma-separated-stream-ids>`
     ///
     /// Example:
     ///   --stream-mapping my-stream-a:trace-a:0,1
